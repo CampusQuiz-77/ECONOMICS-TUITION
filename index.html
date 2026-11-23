@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Register Econs Private Tuition with Muhadeen</title>
-<meta name="description" content="Register for private tuition with Anything Economics. Economics, ecomaths and UGBS courses with Muhadeen. Weekday and weekend sessions, face-to-face or online.">
+<meta name="description" content="Register Econs Private Tuition with Muhadeen. Economics, ecomaths and UGBS courses, weekday and weekend sessions, face-to-face or online.">
+<meta property="og:title" content="Register Econs Private Tuition with Muhadeen">
+<meta property="og:description" content="Private tuition registration with Muhadeen for ECON101, ECON211, ECON213, UGBS201, ECON311, ECON313 and ECON315.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#8B6540">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%238B6540'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-size='30' font-weight='bold' text-anchor='middle' fill='%23FFF8ED'%3EAE%3C/text%3E%3C/svg%3E">
 <script>
@@ -1008,8 +1012,8 @@ body.offline .offline-note { display: block; }
         <div class="receipt" id="thankReceipt"></div>
         <p class="small muted" id="thankScreenshotNote"></p>
         <div class="thank-actions">
-          <button type="button" class="btn btn-primary" id="anotherRegistrationBtn">Submit another registration</button>
-          <a class="btn btn-outline" href="#home">Back to home</a>
+          <button type="button" class="btn btn-primary" id="downloadReceiptBtn">Download receipt (PDF)</button>
+          <button type="button" class="btn btn-outline" id="anotherRegistrationBtn">Submit another registration</button>
         </div>
       </div>
     </div>
@@ -1258,7 +1262,7 @@ body.offline .offline-note { display: block; }
     <div class="footer-links">
       <span>GH₵100 per course per month</span>
       <a href="#register">Registration form</a>
-      <a href="#home">Tutor login</a>
+      <a href="#home" id="footerTutorLink">Tutor login</a>
     </div>
   </div>
 </footer>
@@ -1288,6 +1292,7 @@ body.offline .offline-note { display: block; }
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 (function () {
 'use strict';
@@ -1342,6 +1347,7 @@ const state = {
   studentSearch: '',
   registrationSubmitted: false,
   registrationBusy: false,
+  lastReceipt: null,
   screenshot: null,
   screenshotProcessing: false,
   charts: {},
@@ -1692,9 +1698,7 @@ function renderHeader() {
   if (!host) return;
   let html = '';
   if (!state.user) {
-    if (state.route === 'register') {
-      html += '<a class="btn btn-ghost btn-sm" href="#home">Tutor login</a>';
-    } else {
+    if (state.route !== 'register') {
       html += '<a class="btn btn-ghost btn-sm" href="#register">Student registration</a>';
     }
   } else {
@@ -1715,6 +1719,8 @@ function route() {
   const previous = state.route;
   state.route = onRegister ? 'register' : 'app';
   document.title = onRegister ? SHARE_LABEL : BUSINESS_NAME;
+  const footerTutor = $('#footerTutorLink');
+  if (footerTutor) footerTutor.classList.toggle('hidden', onRegister);
   renderHeader();
 
   if (onRegister) {
@@ -2314,16 +2320,183 @@ function validateRegistration() {
   if (state.screenshotProcessing) { setFieldError('screenshot', 'Please wait for the screenshot to finish compressing.'); errors.push('Screenshot'); }
   return errors;
 }
+function subscriptionPlanText(receipt) {
+  const courseCount = receipt.courses.length;
+  const monthCount = Number(receipt.months) || 1;
+  const dayCount = Number(receipt.days) || courseCount * monthCount * 30;
+  return courseCount + ' course' + (courseCount === 1 ? '' : 's') + ' x ' + monthCount +
+    ' month' + (monthCount === 1 ? '' : 's') + ' (' + dayCount + ' days)';
+}
+function receiptCourseList(receipt) {
+  return receipt.courses.map(function (code) {
+    const found = COURSES.find(function (course) { return course.code === code; });
+    return found ? code + ' - ' + found.name : code;
+  }).join(', ');
+}
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+function downloadReceiptHtml(receipt) {
+  const rows = [
+    ['Full name', esc(receipt.name)],
+    ['WhatsApp number', esc(receipt.phone)],
+    ['Email', receipt.email ? esc(receipt.email) : '-'],
+    ['Course(s)', esc(receiptCourseList(receipt))],
+    ['Plan', esc(subscriptionPlanText(receipt))],
+    ['Monthly rate', 'GHS 100 per course per month'],
+    ['Amount paid', 'GHS ' + Number(receipt.amount || 0).toFixed(2)],
+    ['Date paid', esc(fmtDateFull(receipt.paidDate))],
+    ['Renewal date', esc(fmtDateFull(receipt.renewalDate))],
+    ['Payment reference', esc(receipt.reference)]
+  ];
+  const html = '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>Registration receipt - ' + esc(receipt.reference) + '</title>' +
+    '<style>body{font-family:system-ui,Arial,sans-serif;color:#2b2118;background:#f6efe6;margin:0;padding:32px}' +
+    '.sheet{max-width:720px;margin:auto;background:#fff;border:1px solid #e4d8c8;border-radius:12px;padding:32px}' +
+    'header{background:#8B6540;color:#fff;border-radius:8px;padding:20px 24px;margin-bottom:24px}' +
+    'header h1{margin:0;font-size:22px;text-transform:uppercase;letter-spacing:1px}' +
+    'header p{margin:4px 0 0;font-size:13px}h2{font-size:15px;color:#4a3b2f;margin:26px 0 8px}' +
+    '.row{display:flex;gap:18px;border-bottom:1px solid #e4d8c8;padding:9px 0;font-size:14px}' +
+    '.row span:first-child{width:160px;color:#7a6a5b;font-weight:700}.note{margin-top:26px;padding:16px;background:#f6efe6;border-radius:8px;font-size:13px}' +
+    '@media print{body{background:#fff;padding:0}.sheet{border:0;padding:0}}</style></head><body>' +
+    '<div class="sheet"><header><h1>Anything Economics</h1><p>Private Tuition with Muhadeen</p></header>' +
+    '<h2>Registration receipt</h2>' +
+    '<div class="row"><span>Reference</span><span>' + esc(receipt.reference) + '</span></div>' +
+    '<div class="row"><span>Issued</span><span>' + esc(fmtDateFull(receipt.issuedAt || new Date())) + '</span></div>' +
+    '<h2>Student and subscription</h2>' + rows.map(function (row) {
+      return '<div class="row"><span>' + row[0] + '</span><span>' + row[1] + '</span></div>';
+    }).join('') +
+    '<div class="note"><strong>Keep this receipt.</strong> Muhadeen will verify your payment and confirm on WhatsApp. Your subscription runs until the renewal date above.</div>' +
+    '</div></body></html>';
+  triggerBlobDownload(new Blob([html], { type: 'text/html;charset=utf-8' }),
+    'AE-receipt-' + String(receipt.reference || '').replace(/[^a-z0-9_-]/gi, '') + '.html');
+  toast('Receipt downloaded. Open it and print to save as PDF.', 'success');
+}
+function downloadReceipt() {
+  const receipt = state.lastReceipt;
+  if (!receipt) { toast('Your receipt is not ready yet.', 'error'); return; }
+  const filename = 'AE-receipt-' + String(receipt.reference || '').replace(/[^a-z0-9_-]/gi, '') + '.pdf';
+  const JsPDF = window.jspdf && window.jspdf.jsPDF;
+  if (JsPDF) {
+    try {
+      const doc = new JsPDF({ unit: 'pt', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const margin = 44;
+      const contentW = pageW - margin * 2;
+      const issued = receipt.issuedAt ? new Date(receipt.issuedAt) : new Date();
+      const ghs = function (value) { return 'GHS ' + Number(value || 0).toFixed(2); };
+
+      doc.setProperties({
+        title: 'Registration receipt - ' + receipt.reference,
+        subject: 'Anything Economics subscription receipt',
+        author: BUSINESS_NAME
+      });
+      doc.setFillColor(139, 101, 64);
+      doc.rect(0, 0, pageW, 116, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.text('ANYTHING ECONOMICS', margin, 44);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('Private Tuition with Muhadeen', margin, 64);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text('REGISTRATION RECEIPT', pageW - margin, 44, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text('Ref: ' + receipt.reference, pageW - margin, 62, { align: 'right' });
+      doc.text('Issued: ' + fmtDateFull(issued), pageW - margin, 78, { align: 'right' });
+
+      let y = 150;
+      const section = function (title) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(74, 59, 47);
+        doc.text(title, margin, y);
+        y += 10;
+        doc.setDrawColor(228, 216, 200); doc.setLineWidth(1);
+        doc.line(margin, y, pageW - margin, y);
+        y += 22;
+      };
+      const row = function (label, value) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(122, 106, 91);
+        doc.text(label, margin, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(43, 33, 24);
+        const lines = doc.splitTextToSize(String(value === null || value === undefined || value === '' ? '-' : value), contentW - 160);
+        doc.text(lines, margin + 160, y);
+        y += Math.max(20, lines.length * 14 + 6);
+      };
+
+      section('Student details');
+      row('Full name', receipt.name);
+      row('WhatsApp number', receipt.phone);
+      if (receipt.email) row('Email', receipt.email);
+      row('Course(s)', receiptCourseList(receipt));
+
+      y += 8;
+      section('Subscription summary');
+      row('Plan', subscriptionPlanText(receipt));
+      row('Monthly rate', 'GHS 100 per course per month');
+      row('Amount paid', ghs(receipt.amount));
+      row('Date paid', fmtDateFull(receipt.paidDate));
+      row('Subscription covers', Number(receipt.days) + ' days');
+      row('Renewal date', fmtDateFull(receipt.renewalDate));
+      row('Payment reference', receipt.reference);
+
+      y += 12;
+      doc.setFillColor(246, 239, 230);
+      doc.roundedRect(margin, y, contentW, 62, 8, 8, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(74, 59, 47);
+      doc.text('Keep this receipt', margin + 16, y + 24);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 75, 61);
+      doc.text(doc.splitTextToSize('Muhadeen will verify your payment and confirm on WhatsApp. Your subscription runs until the renewal date above.', contentW - 32), margin + 16, y + 43);
+
+      doc.setFontSize(8); doc.setTextColor(122, 106, 91);
+      doc.text('Anything Economics Private Tuition with Muhadeen', margin, pageH - 28);
+
+      doc.save(filename);
+      toast('Receipt downloaded.', 'success');
+      return;
+    } catch (error) {
+      console.error('PDF receipt failed', error);
+    }
+  }
+  downloadReceiptHtml(receipt);
+}
 function showThankYou(data) {
   const card = $('#thankYouCard');
   const formCard = $('#registerCard');
   if (formCard) formCard.classList.add('hidden');
   if (!card) return;
   $('#thankName').textContent = data.name;
+  state.lastReceipt = {
+    reference: data.reference,
+    name: data.name,
+    phone: data.phone,
+    email: data.email,
+    courses: data.courses.slice(),
+    amount: data.amount,
+    months: data.months,
+    days: data.days,
+    paidDate: data.paidDate,
+    renewalDate: data.renewalDate,
+    issuedAt: new Date()
+  };
+  const shortRef = String(data.reference || '').slice(-8).toUpperCase();
   const rows = [
+    ['Reference', esc(shortRef)],
     ['Name', esc(data.name)],
     ['WhatsApp', esc(data.phone)],
     ['Course(s)', data.courses.map(function (code) { return '<span class="chip">' + esc(code) + '</span>'; }).join('')],
+    ['Subscription', esc(subscriptionPlanText(state.lastReceipt))],
     ['Amount paid', esc(money(data.amount))],
     ['Date paid', esc(fmtDate(data.paidDate))],
     ['Renewal date', esc(fmtDateFull(data.renewalDate)), true]
@@ -2346,6 +2519,7 @@ function resetRegistration() {
   state.screenshot = null;
   state.screenshotProcessing = false;
   state.registrationSubmitted = false;
+  state.lastReceipt = null;
   showUploadUI();
   const dateInput = $('#regPaidDate');
   const today = toISODate(new Date());
@@ -2462,7 +2636,8 @@ function bindRegisterEvents() {
         btn.disabled = false;
         btn.innerHTML = currentSettings().submitLabel;
         showThankYou({
-          name: name, phone: phone, courses: courses, amount: amount,
+          reference: paymentRef.id, name: name, phone: phone, email: email,
+          courses: courses, amount: amount, months: months, days: days,
           paidDate: paidDate, renewalDate: renewalDate, screenshotWarning: screenshotOk === false
         });
         toast('Registration received.', 'success');
@@ -2481,6 +2656,8 @@ function bindRegisterEvents() {
   }
   const again = $('#anotherRegistrationBtn');
   if (again) again.addEventListener('click', function () { resetRegistration(); });
+  const download = $('#downloadReceiptBtn');
+  if (download) download.addEventListener('click', downloadReceipt);
   updateBillingPreview();
   showUploadUI();
 }
