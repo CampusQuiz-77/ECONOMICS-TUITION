@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anything Economics – Tuition Manager</title>
+<style>
+:root{--brown:#8B6540;--dark:#4a3b2f;--cream:#f6efe6;--card:#fff;--text:#2b2118;--mute:#7a6a5b;--line:#e4d8c8;--ok:#2f7d4f;--warn:#b7791f;--bad:#b3392f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cream:#201912;--card:#2c2319;--text:#f3eadf;--mute:#b9a994;--line:#443728;--brown:#a67a4c}}
+:root[data-theme="dark"]{--cream:#201912;--card:#2c2319;--text:#f3eadf;--mute:#b9a994;--line:#443728;--brown:#a67a4c}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--cream);color:var(--text)}
+header{background:var(--brown);color:#fff;padding:22px 16px 18px;text-align:center}
+header h1{margin:0;font-size:clamp(22px,5vw,34px);letter-spacing:1px;text-transform:uppercase}
+header p{margin:4px 0 0;opacity:.9;font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:16px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button,.btn{background:var(--dark);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:14px}
+nav button.on{background:var(--brown)}
+.btn.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:14px}
+.stat b{display:block;font-size:26px;color:var(--brown)}.stat span{color:var(--mute);font-size:13px}
+.two{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.chart{position:relative;height:280px}
+h2{margin:0 0 10px;font-size:18px}
+label{display:block;font-weight:700;margin:12px 0 4px;font-size:14px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:var(--cream);color:var(--text)}
+.courses label{display:flex;gap:8px;align-items:center;font-weight:600;margin:6px 0;padding:8px;border:1px solid var(--line);border-radius:8px}
+.courses input{width:auto}
+.note{background:var(--cream);border-left:4px solid var(--brown);padding:10px 12px;border-radius:6px;margin:12px 0;font-size:14px}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--mute);font-size:12px;text-transform:uppercase}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff;margin:1px}
+.ok{background:var(--ok)}.warn{background:var(--warn)}.bad{background:var(--bad)}
+.hide{display:none}.muted{color:var(--mute);font-size:13px}
+.err{color:var(--bad);font-weight:700}
+</style></head><body>
+<header><h1>Anything Economics</h1><p>Private Tuition · Tutor: Muhadeen</p></header>
+<main id="app"><p class="muted">Loading…</p></main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const PRICE=100,DAY=86400000;
+const COURSES=[["ECON101","Intro to Econ 1"],["ECON211","Elements of Econs 1"],["ECON213","Ecomaths"],["UGBS201","Micro-Economics"],["ECON311","Microeconomics 1"],["ECON313","Macroeconomics 1"],["ECON315","Applied Mathematics"]];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const iso=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+const parse=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const fmt=d=>new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+const money=n=>"GH₵ "+Number(n||0).toLocaleString("en-GB",{maximumFractionDigits:2});
+const today=()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate())};
+const firebaseConfig={apiKey:"PASTE_API_KEY",authDomain:"PASTE_AUTH_DOMAIN",projectId:"PASTE_PROJECT_ID",appId:"PASTE_APP_ID"};
+let fdb,auth,pays=[],tab="dash",charts=[],q="",loadErr="";
+function init(){
+  if(firebaseConfig.apiKey.startsWith("PASTE")){$("#app").innerHTML='<div class="card"><h2>Setup needed</h2><p>Open index.html and paste your Firebase config at the top of the script (see README.md).</p></div>';return}
+  firebase.initializeApp(firebaseConfig);fdb=firebase.firestore();auth=firebase.auth();
+  if(location.hash==="#register"){renderForm();return}
+  auth.onAuthStateChanged(u=>{if(u)load();else loginHTML()});
+}
+addEventListener("hashchange",()=>location.reload());
+async function load(){try{const s=await fdb.collection("payments").get();pays=s.docs.map(d=>({id:d.id,...d.data()}));loadErr=""}catch(e){loadErr="Could not load data: "+e.message}render()}
+function loginHTML(){$("#app").innerHTML='<div class="card" style="max-width:400px;margin:auto"><h2>Tutor login</h2><label>Email</label><input id="le" type="email"><label>Password</label><input id="lp" type="password" onkeydown="if(event.key===\'Enter\')login()"><p id="lm" class="err"></p><button class="btn" onclick="login()">Log in</button></div>'}
+async function login(){try{await auth.signInWithEmailAndPassword($("#le").value.trim(),$("#lp").value)}catch(e){$("#lm").textContent="Login failed: check email and password."}}
+function logout(){auth.signOut()}
+async function viewShot(id){const w=window.open("","_blank");try{const d=await fdb.collection("shots").doc(id).get();w.document.write('<body style="margin:0;background:#222"><img style="max-width:100%" src="data:image/jpeg;base64,'+d.data().data+'">')}catch(e){w.document.write("Could not load screenshot.")}}
+function shrink(f){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const k=Math.min(1,1000/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=img.width*k;c.height=img.height*k;c.getContext("2d").drawImage(img,0,0,c.width,c.height);const o=c.toDataURL("image/jpeg",.55).split(",")[1];o.length>850000?rej(new Error("Image too large, use a smaller screenshot")):res(o)};img.onerror=()=>rej(new Error("Could not read image"));img.src=URL.createObjectURL(f)})}
+async function addPay(rec,img){const ref=fdb.collection("payments").doc(),b=fdb.batch();b.set(ref,{name:rec.name,phone:rec.phone,email:rec.email||"",courses:rec.courses,amount:rec.amount,paidDate:rec.paidDate,hasShot:!!img,source:rec.source||"form",createdAt:Date.now()});if(img)b.set(fdb.collection("shots").doc(ref.id),{data:img});await b.commit()}
+
+/* ---------- calculations ---------- */
+function monthsFor(p){const n=Math.max(1,(p.courses||[]).length);return Math.max(1,Math.floor((+p.amount||0)/(PRICE*n)))}
+function students(){
+  const g={};
+  pays.forEach(p=>{const k=(String(p.phone||"").replace(/\D/g,"")||String(p.name||"").toLowerCase().trim());(g[k]=g[k]||[]).push(p)});
+  const t=today();
+  return Object.values(g).map(list=>{
+    list.sort((a,b)=>a.paidDate.localeCompare(b.paidDate));
+    let exp=null,total=0,months=0;const cs=new Set();
+    list.forEach(p=>{const d=parse(p.paidDate),m=monthsFor(p);const start=exp&&exp>d?exp:d;exp=addDays(start,30*m);total+=+p.amount||0;months+=m;(p.courses||[]).forEach(c=>cs.add(c))});
+    const first=parse(list[0].paidDate),left=Math.ceil((exp-t)/DAY);
+    const elapsed=Math.max(months,Math.floor((t-first)/DAY/30)+1);
+    const chips=[];for(let k=1;k<=elapsed;k++){const st=addDays(first,30*(k-1));if(st>t&&k>months)break;chips.push({k,st,paid:k<=months})}
+    return {name:list[list.length-1].name,phone:list[list.length-1].phone,email:list[list.length-1].email,courses:[...cs],total,exp,left,first,chips,
+      status:left<=0?"Not paid":left<=5?"Due soon":"Active"}
+  }).sort((a,b)=>a.exp-b.exp);
+}
+function monthly(){
+  const m={};pays.forEach(p=>{const k=p.paidDate.slice(0,7);m[k]=(m[k]||0)+(+p.amount||0)});
+  const keys=Object.keys(m).sort();let c=0;
+  return {labels:keys.map(k=>new Date(k+"-01").toLocaleDateString("en-GB",{month:"short",year:"2-digit"})),vals:keys.map(k=>m[k]),cum:keys.map(k=>c+=m[k])};
+}
+function perCourse(){
+  const r={},n={};COURSES.forEach(c=>{r[c[0]]=0;n[c[0]]=0});
+  pays.forEach(p=>{const cs=p.courses||[];cs.forEach(c=>{if(c in r)r[c]+=(+p.amount||0)/cs.length});});
+  students().forEach(s=>s.courses.forEach(c=>{if(c in n)n[c]++}));
+  return {r,n};
+}
+
+/* ---------- admin ---------- */
+function render(){
+  charts.forEach(c=>c.destroy());charts=[];
+  const tabs=[["dash","Dashboard"],["stu","Students"],["pay","Payments"],["imp","Import / Export"],["share","Share form"]];
+  let h=`<nav>${tabs.map(t=>`<button class="${tab===t[0]?"on":""}" onclick="tab='${t[0]}';render()">${t[1]}</button>`).join("")}<button onclick="logout()" style="margin-left:auto;background:transparent;color:var(--text);border:1px solid var(--line)">Log out</button></nav>`;
+  if(loadErr)h+=`<p class="err">${esc(loadErr)}</p>`;
+  h+=({dash:dashHTML,stu:stuHTML,pay:payHTML,imp:impHTML,share:shareHTML})[tab]();
+  $("#app").innerHTML=h;
+  if(tab==="dash")drawCharts();
+}
+function dashHTML(){
+  const S=students(),total=pays.reduce((a,p)=>a+(+p.amount||0),0);
+  const ym=iso(new Date()).slice(0,7),thisM=pays.filter(p=>p.paidDate.startsWith(ym)).reduce((a,p)=>a+(+p.amount||0),0);
+  const act=S.filter(s=>s.status!=="Not paid").length,over=S.filter(s=>s.status==="Not paid").length,due=S.filter(s=>s.status==="Due soon").length;
+  const owed=S.filter(s=>s.status!=="Active").slice(0,8);
+  return `<div class="grid">
+  <div class="card stat"><b>${money(total)}</b><span>Total revenue</span></div>
+  <div class="card stat"><b>${money(thisM)}</b><span>This month</span></div>
+  <div class="card stat"><b>${S.length}</b><span>Students registered</span></div>
+  <div class="card stat"><b>${act}</b><span>Currently paid up</span></div>
+  <div class="card stat"><b>${due}</b><span>Due within 5 days</span></div>
+  <div class="card stat"><b>${over}</b><span>Not paid (expired)</span></div></div>
+  <div class="two"><div class="card"><h2>Monthly revenue &amp; cumulative growth</h2><div class="chart"><canvas id="c1"></canvas></div></div>
+  <div class="card"><h2>Students &amp; revenue per course</h2><div class="chart"><canvas id="c2"></canvas></div></div></div>
+  <div class="card"><h2>Needs attention</h2>${owed.length?`<div class="wrap"><table><tr><th>Student</th><th>Phone</th><th>Status</th><th>Expired / expires</th></tr>${owed.map(s=>`<tr><td>${esc(s.name)}</td><td>${esc(s.phone)}</td><td>${badge(s.status)}</td><td>${fmt(s.exp)}</td></tr>`).join("")}</table></div>`:`<p class="muted">Everyone is paid up 🎉</p>`}</div>`;
+}
+const badge=s=>`<span class="pill ${s==="Active"?"ok":s==="Due soon"?"warn":"bad"}">${s}</span>`;
+function drawCharts(){
+  const css=getComputedStyle(document.documentElement),tx=css.getPropertyValue("--text").trim(),br=css.getPropertyValue("--brown").trim(),dk="#4a3b2f",ln=css.getPropertyValue("--line").trim();
+  Chart.defaults.color=tx;Chart.defaults.borderColor=ln;
+  const m=monthly();
+  charts.push(new Chart($("#c1"),{data:{labels:m.labels,datasets:[{type:"bar",label:"Monthly revenue (GH₵)",data:m.vals,backgroundColor:br},{type:"line",label:"Cumulative (GH₵)",data:m.cum,borderColor:dk,backgroundColor:dk,tension:.3}]},options:{maintainAspectRatio:false}}));
+  const pc=perCourse();
+  charts.push(new Chart($("#c2"),{data:{labels:COURSES.map(c=>c[0]),datasets:[{type:"bar",label:"Revenue (GH₵)",data:COURSES.map(c=>Math.round(pc.r[c[0]])),backgroundColor:br,yAxisID:"y"},{type:"line",label:"Students",data:COURSES.map(c=>pc.n[c[0]]),borderColor:dk,backgroundColor:dk,yAxisID:"y1"}]},options:{maintainAspectRatio:false,scales:{y:{position:"left"},y1:{position:"right",grid:{drawOnChartArea:false},beginAtZero:true}}}}));
+}
+function stuHTML(){
+  const S=students().filter(s=>!q||(s.name+s.phone+s.email).toLowerCase().includes(q.toLowerCase()));
+  return `<div class="card"><input placeholder="Search name or phone…" value="${esc(q)}" oninput="q=this.value;render();const i=document.querySelector('input');i.focus();i.setSelectionRange(q.length,q.length)">
+  <div class="wrap"><table><tr><th>Student</th><th>Courses</th><th>Total paid</th><th>Paid until</th><th>Status</th><th>Month-by-month (30-day months)</th></tr>
+  ${S.map(s=>`<tr><td><b>${esc(s.name)}</b><br><span class="muted">${esc(s.phone)}</span></td><td>${s.courses.map(esc).join(", ")}</td><td>${money(s.total)}</td><td>${fmt(s.exp)}<br><span class="muted">${s.left>0?s.left+" days left":Math.abs(s.left)+" days overdue"}</span></td><td>${badge(s.status)}</td>
+  <td>${s.chips.map(c=>`<span class="pill ${c.paid?"ok":"bad"}" title="from ${fmt(c.st)}">M${c.k}: ${c.paid?"Paid":"Not paid"}</span>`).join("")}</td></tr>`).join("")||`<tr><td colspan="6" class="muted">No students yet.</td></tr>`}</table></div></div>`;
+}
+function payHTML(){
+  const L=[...pays].sort((a,b)=>b.paidDate.localeCompare(a.paidDate));
+  return `<div class="card"><div class="wrap"><table><tr><th>Date paid</th><th>Student</th><th>Courses</th><th>Amount</th><th>Covers until</th><th>Proof</th><th></th></tr>
+  ${L.map(p=>{const exp=addDays(parse(p.paidDate),30*monthsFor(p)),exp2=(+p.amount%(PRICE*Math.max(1,(p.courses||[]).length)))?`<br><span class="err" style="font-size:12px">Amount ≠ multiple of ${PRICE}×courses</span>`:"";
+  return `<tr><td>${fmt(parse(p.paidDate))}</td><td>${esc(p.name)}<br><span class="muted">${esc(p.phone)}</span></td><td>${(p.courses||[]).map(esc).join(", ")}</td><td>${money(p.amount)}${exp2}</td><td>${fmt(exp)}</td><td>${p.hasShot?`<a href="#" onclick="viewShot('${esc(p.id)}');return false">View</a>`:"—"}</td><td><button class="btn sm alt" onclick="del('${p.id}')">Delete</button></td></tr>`}).join("")||`<tr><td colspan="7" class="muted">No payments yet.</td></tr>`}</table></div></div>`;
+}
+async function del(id){if(!confirm("Delete this payment record?"))return;try{const b=fdb.batch();b.delete(fdb.collection("payments").doc(id));b.delete(fdb.collection("shots").doc(id));await b.commit();await load()}catch(e){alert(e.message)}}
+function impHTML(){return `<div class="card"><h2>Import Google Form responses (Excel / CSV)</h2>
+<p class="muted">Columns are matched by name: Name, Phone, Email, Courses, Amount, Date paid (or Timestamp). Duplicates are skipped.</p>
+<input type="file" id="f" accept=".xlsx,.xls,.csv"><p id="imsg"></p><button class="btn" onclick="doImport()">Import file</button></div>
+<div class="card"><h2>Export everything to Excel</h2><p class="muted">Registrations, student summary (status &amp; paid-until) and monthly revenue in one workbook.</p><button class="btn" onclick="doExport()">Download Excel file</button><p id="emsg"></p></div>`}
+async function doImport(){
+  const f=$("#f").files[0],msg=$("#imsg");if(!f){msg.textContent="Choose a file first.";return}
+  const wb=XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true}),rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+  const find=(r,re)=>{const k=Object.keys(r).find(k=>re.test(k));return k?r[k]:""};
+  const have=new Set(pays.map(p=>[p.phone,p.paidDate,p.amount].join("|")));let n=0,skip=0;const batch=[];
+  for(const r of rows){
+    const name=String(find(r,/name/i)).trim(),phone=String(find(r,/phone|number|contact|whatsapp/i)).trim();
+    const amount=parseFloat(String(find(r,/amount|paid(?!.*date)/i)).replace(/[^\d.]/g,""))||0;
+    let d=find(r,/date.*paid|paid.*date|payment date/i)||find(r,/date|timestamp/i);
+    d=d instanceof Date?d:new Date(d);if(!name||!amount||isNaN(d)){skip++;continue}
+    const courses=COURSES.map(c=>c[0]).filter(c=>String(find(r,/course/i)).toUpperCase().includes(c));
+    const rec={name,phone,email:String(find(r,/email/i)).trim(),courses,amount,paidDate:iso(d),source:"import",createdAt:Date.now()};
+    const key=[phone,rec.paidDate,amount].join("|");if(have.has(key)){skip++;continue}
+    have.add(key);await addPay({...rec,source:"import"});n++;
+  }
+  await load();$("#imsg").innerHTML=`<b>${n}</b> imported, ${skip} skipped.`;
+}
+async function doExport(){
+  const S=students(),m=monthly(),wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(pays.map(p=>({"Date paid":p.paidDate,Name:p.name,Phone:p.phone,Email:p.email,Courses:(p.courses||[]).join(", "),"Amount (GHS)":+p.amount,"Months covered":monthsFor(p),"Covers until":iso(addDays(parse(p.paidDate),30*monthsFor(p))),Screenshot:p.hasShot?"Yes":"No"}))),"Registrations");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(S.map(s=>({Name:s.name,Phone:s.phone,Courses:s.courses.join(", "),"Total paid (GHS)":s.total,"First payment":iso(s.first),"Paid until":iso(s.exp),Status:s.status,"Month status":s.chips.map(c=>"M"+c.k+":"+(c.paid?"Paid":"Not paid")).join(" | ")}))),"Students");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(m.labels.map((l,i)=>({Month:l,"Revenue (GHS)":m.vals[i],"Cumulative (GHS)":m.cum[i]}))),"Monthly revenue");
+  XLSX.writeFile(wb,"tuition-records-"+iso(new Date())+".xlsx");
+}
+function shareHTML(){
+  const link=location.href.split("#")[0]+"#register";
+  return `<div class="card"><h2>Registration form link</h2><p>Send this link to students. They fill the form, upload their payment screenshot, and the dashboard updates automatically.</p>
+  <input readonly value="${esc(link)}" onclick="this.select()"><br><br><button class="btn" onclick="navigator.clipboard.writeText('${esc(link)}');this.textContent='Copied ✓'">Copy link</button> <a class="btn alt" style="text-decoration:none;display:inline-block" href="#register" target="_blank">Preview form</a>
+  <div class="note">Anyone with this link can submit the form. Only you (logged in) can see the records.</div></div>`;
+}
+
+/* ---------- registration form ---------- */
+function renderForm(){
+  $("#app").innerHTML=`<div class="card"><h2>Register for private tuition</h2><p class="muted">GH₵${PRICE} per course per month. Level 400 courses are handled on request.</p>
+  <label>Full name</label><input id="n"><label>Phone number (WhatsApp)</label><input id="p" type="tel"><label>Email (optional)</label><input id="e" type="email">
+  <label>Select your course(s)</label><div class="courses">${COURSES.map(c=>`<label><input type="checkbox" value="${c[0]}" onchange="calc()"> ${c[0]} – ${c[1]}</label>`).join("")}</div>
+  <label>Date you paid</label><input id="d" type="date" max="${iso(new Date())}" onchange="calc()">
+  <label>Number of months paid for</label><select id="mo" onchange="calc()">${[1,2,3,4,5,6].map(i=>`<option>${i}</option>`).join("")}</select>
+  <div class="note" id="sum">Select your courses and payment date to see the amount and renewal date.</div>
+  <label>Amount paid (GH₵)</label><input id="a" type="number" min="0">
+  <label>Payment screenshot</label><input id="s" type="file" accept="image/*">
+  <p id="m" class="err"></p><button class="btn" id="go" onclick="submitForm()">Submit registration</button></div>`;
+}
+function calc(){
+  const cs=[...document.querySelectorAll(".courses input:checked")].map(x=>x.value),mo=+$("#mo").value,d=$("#d").value;
+  const due=cs.length*PRICE*mo;if(cs.length)$("#a").value=due;
+  $("#sum").innerHTML=cs.length?`Amount due: <b>${money(due)}</b> (${cs.length} course${cs.length>1?"s":""} × GH₵${PRICE} × ${mo} month${mo>1?"s":""})`+(d?`<br>Your payment covers you until <b>${fmt(addDays(parse(d),30*mo))}</b>. Please pay again on or before this date.`:""):"Select your courses and payment date to see the amount and renewal date.";
+}
+async function submitForm(){
+  const cs=[...document.querySelectorAll(".courses input:checked")].map(x=>x.value),v=id=>$("#"+id).value.trim(),m=$("#m");
+  if(!v("n")||!v("p")||!cs.length||!v("d")||!(+v("a")>0)){m.textContent="Please fill name, phone, courses, date and amount.";return}
+  $("#go").disabled=true;m.textContent="Submitting…";
+  try{
+    let shot="";const f=$("#s").files[0];
+    if(f)shot=await shrink(f);
+    await addPay({name:v("n"),phone:v("p"),email:v("e"),courses:cs,amount:+v("a"),paidDate:v("d"),source:"form"},shot);
+    const mo=Math.max(1,Math.floor(+v("a")/(PRICE*cs.length)));
+    $("#app").innerHTML=`<div class="card"><h2>Thank you, ${esc(v("n"))}! ✅</h2><p>Your registration for <b>${cs.join(", ")}</b> has been received.</p><div class="note">Your payment of ${money(v("a"))} covers you until <b>${fmt(addDays(parse(v("d")),30*mo))}</b>. Please make your next payment on or before that date.</div></div>`;
+  }catch(e){m.textContent="Could not submit ("+(e.code||e.message||"error")+"). Check your internet and try again.";$("#go").disabled=false}
+}
+init();
+</script></body></html>
