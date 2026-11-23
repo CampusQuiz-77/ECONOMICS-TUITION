@@ -349,6 +349,21 @@ input.invalid, select.invalid, textarea.invalid { border-color: var(--danger); b
 .settings-preview { margin-top: 8px; padding: 12px; border: 1px dashed var(--border-strong); border-radius: 10px; background: var(--surface-2); }
 .settings-preview img { max-height: 180px; width: auto; border-radius: 8px; border: 4px solid #4a3b2f; }
 .settings-status { margin-top: 12px; font-size: .85rem; font-weight: 700; min-height: 20px; }
+.payment-details {
+  margin: 0 0 18px; padding: 15px 17px; border: 1px solid var(--border-strong);
+  border-radius: 12px; background: color-mix(in srgb, var(--brown) 6%, var(--surface));
+}
+.payment-details-head { display: flex; gap: 10px; align-items: flex-start; }
+.payment-details-head svg { width: 20px; height: 20px; color: var(--brown); flex: 0 0 auto; margin-top: 2px; }
+.payment-details-head strong { display: block; font-size: .92rem; }
+.payment-details-head span { display: block; font-size: .8rem; color: var(--muted); margin-top: 3px; }
+.payment-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 13px; }
+.payment-detail { padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; }
+.payment-detail span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 750; }
+.payment-detail strong, .payment-detail a { display: block; margin-top: 3px; font-size: 1rem; font-weight: 850; color: var(--brown-deep); text-decoration: none; }
+.payment-detail a:hover { text-decoration: underline; }
+.questions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.questions-title { grid-column: 1 / -1; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--border); font-size: .9rem; font-weight: 850; color: var(--brown-deep); }
 .settings-status.ok { color: var(--success); }
 .settings-status.bad { color: var(--danger); }
 .pill-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
@@ -742,6 +757,7 @@ body.offline .offline-note { display: block; }
   .form-grid { grid-template-columns: 1fr; }
   .amount-row { grid-template-columns: 1fr; }
   .settings-grid { grid-template-columns: 1fr; }
+  .payment-details-grid, .questions-grid { grid-template-columns: 1fr; }
   .board-frame { border-width: 6px; }
   .course-grid { grid-template-columns: 1fr; }
   .course-tile-inner { min-height: 62px; padding: 11px 12px; }
@@ -900,22 +916,22 @@ body.offline .offline-note { display: block; }
             <div class="form-section" style="margin-top:0;">
               <div class="section-head">
                 <span class="section-num">1</span>
-                <h2>Your details</h2>
-                <p>So Muhadeen can reach you on WhatsApp.</p>
+                <h2 data-setting="s1Title">Your details</h2>
+                <p data-setting="s1Intro">So Muhadeen can reach you on WhatsApp.</p>
               </div>
               <div class="form-grid">
                 <div class="field span-2">
-                  <label for="regName">Full name</label>
+                  <label for="regName" data-setting="nameLabel">Full name</label>
                   <input type="text" id="regName" name="name" autocomplete="name" placeholder="e.g. Ama Mensah" maxlength="100" required>
                   <p class="field-error" data-error-for="name"></p>
                 </div>
                 <div class="field">
-                  <label for="regPhone">Phone number (WhatsApp)</label>
+                  <label for="regPhone" data-setting="phoneLabel">Phone number (WhatsApp)</label>
                   <input type="tel" id="regPhone" name="phone" autocomplete="tel" inputmode="tel" placeholder="e.g. 024 123 4567" maxlength="20" required>
                   <p class="field-error" data-error-for="phone"></p>
                 </div>
                 <div class="field">
-                  <label for="regEmail">Email <span class="muted" style="font-weight:500;">(optional)</span></label>
+                  <label for="regEmail"><span data-setting="emailLabel">Email</span> <span class="muted" style="font-weight:500;">(optional)</span></label>
                   <input type="email" id="regEmail" name="email" autocomplete="email" inputmode="email" placeholder="you@example.com" maxlength="200">
                   <p class="field-error" data-error-for="email"></p>
                 </div>
@@ -925,31 +941,50 @@ body.offline .offline-note { display: block; }
             <div class="form-section">
               <div class="section-head">
                 <span class="section-num">2</span>
-                <h2>Choose your course(s)</h2>
-                <p>Select every course you are paying for.</p>
+                <h2 data-setting="s2Title">Choose your course(s)</h2>
+                <p data-setting="s2Intro">Select every course you are paying for.</p>
               </div>
               <div class="course-grid" id="courseGrid" role="group" aria-label="Courses"></div>
               <p class="field-error" data-error-for="courses"></p>
               <div class="level-note">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                <span><strong>Level 400 courses are available on request.</strong> Message Muhadeen directly on WhatsApp before paying for a Level 400 course.</span>
+                <span><strong data-setting="levelTitle">Level 400 courses are available on request.</strong> <span data-setting="levelText">Message Muhadeen directly on WhatsApp before paying for a Level 400 course.</span></span>
               </div>
             </div>
 
             <div class="form-section">
               <div class="section-head">
                 <span class="section-num">3</span>
-                <h2>Payment details</h2>
-                <p>Each month is 30 days, starting from your payment date.</p>
+                <h2 data-setting="s3Title">Payment details</h2>
+                <p data-setting="s3Intro">Each month is 30 days, starting from your payment date.</p>
+              </div>
+              <div class="payment-details" id="paymentDetails">
+                <div class="payment-details-head">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h4"/></svg>
+                  <div>
+                    <strong data-setting="payTitle">Pay before you fill this form</strong>
+                    <span data-setting="payIntro">Send your payment to the number below, then enter the amount here.</span>
+                  </div>
+                </div>
+                <div class="payment-details-grid">
+                  <div class="payment-detail">
+                    <span>Name</span>
+                    <strong data-setting="paymentName">Muhadeen Mohammed</strong>
+                  </div>
+                  <div class="payment-detail">
+                    <span>Number</span>
+                    <a href="tel:0509937611" id="payNumberLink" data-setting="paymentNumber">0509937611</a>
+                  </div>
+                </div>
               </div>
               <div class="form-grid">
                 <div class="field">
-                  <label for="regPaidDate">Date you paid</label>
+                  <label for="regPaidDate" data-setting="dateLabel">Date you paid</label>
                   <input type="date" id="regPaidDate" name="paidDate" required>
                   <p class="field-error" data-error-for="paidDate"></p>
                 </div>
                 <div class="field">
-                  <label for="regMonths">Number of months you are paying for</label>
+                  <label for="regMonths" data-setting="monthsLabel">Number of months you are paying for</label>
                   <select id="regMonths" name="months" required>
                     <option value="1">1 month</option>
                     <option value="2">2 months</option>
@@ -964,7 +999,7 @@ body.offline .offline-note { display: block; }
 
               <div class="amount-row">
                 <div class="field">
-                  <label for="regAmount">Amount paid (GH₵)</label>
+                  <label for="regAmount"><span data-setting="amountLabel">Amount paid</span> (GH₵)</label>
                   <div class="amount-box">
                     <span class="amount-prefix" aria-hidden="true">GH₵</span>
                     <input type="number" id="regAmount" name="amount" inputmode="decimal" min="1" step="0.01" placeholder="0.00" required>
@@ -973,7 +1008,7 @@ body.offline .offline-note { display: block; }
                   <p class="amount-note" id="amountNote"></p>
                 </div>
                 <div class="field">
-                  <label for="regScreenshot">Payment screenshot</label>
+                  <label for="regScreenshot" data-setting="screenshotLabel">Payment screenshot</label>
                   <div class="upload-zone" id="uploadZone">
                     <input type="file" id="regScreenshot" accept="image/jpeg,image/png,image/webp,image/*" class="hidden">
                     <div class="upload-empty" id="uploadEmpty">
@@ -1024,7 +1059,10 @@ body.offline .offline-note { display: block; }
         </div>
         <span class="eyebrow" style="justify-content:center;">Registration received</span>
         <h1>Thank you, <span id="thankName">student</span>!
-
+          <a class="whatsapp-link hidden" id="thankWhatsappLink" href="#" target="_blank" rel="noopener" aria-label="Message this student on WhatsApp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20l1.2-5.3A8.4 8.4 0 1 1 21 11.5Z"/><path d="M8.5 9.2c.2 2.4 2.4 4.6 4.8 4.8l1.4-1.4 2.1 1.1c-.5 1.1-1.5 1.7-2.8 1.7A6.6 6.6 0 0 1 7.2 9.2c0-1.3.6-2.3 1.7-2.8l1.1 2.1-1.5 1.4Z"/></svg>
+            Message on WhatsApp
+          </a>
         </h1>
         <p class="muted" id="thankMessage">Your registration has been received and we shall confirm your payment on WhatsApp.</p>
         <div class="receipt" id="thankReceipt"></div>
@@ -1252,6 +1290,8 @@ body.offline .offline-note { display: block; }
                 <label for="setContactNote">Note under the submit button</label>
                 <textarea id="setContactNote" maxlength="300" placeholder="Muhadeen will confirm your payment on WhatsApp."></textarea>
               </div>
+              <div class="questions-title span-2">Questions and wording</div>
+              <div class="questions-grid span-2" id="settingsQuestions"></div>
               <div class="field span-2">
                 <label for="setHeaderFile">Classroom board header image</label>
                 <p class="hint" style="margin-top:0;">Design a banner on Canva, save it as a JPG or PNG, then upload it here. It appears at the top of the form while students fill it in.</p>
@@ -1918,6 +1958,8 @@ function init() {
     return;
   }
   buildCourseGrid();
+  captureFormTextDefaults();
+  buildQuestionFields();
   bindGlobalEvents();
   bindAuthEvents();
   bindRegisterEvents();
@@ -1946,6 +1988,57 @@ function init() {
 /* ==========================================================================
    9b. EDITABLE FORM SETTINGS (public read, tutor write)
    ========================================================================== */
+const EDITABLE_TEXT_FIELDS = [
+  { key: 's1Title', label: 'Section 1 heading' },
+  { key: 's1Intro', label: 'Section 1 instruction' },
+  { key: 'nameLabel', label: 'Full name question' },
+  { key: 'phoneLabel', label: 'Phone number question' },
+  { key: 'emailLabel', label: 'Email question' },
+  { key: 's2Title', label: 'Section 2 heading' },
+  { key: 's2Intro', label: 'Section 2 instruction' },
+  { key: 'levelTitle', label: 'Level 400 note heading' },
+  { key: 'levelText', label: 'Level 400 note text' },
+  { key: 's3Title', label: 'Section 3 heading' },
+  { key: 's3Intro', label: 'Section 3 instruction' },
+  { key: 'payTitle', label: 'Payment box heading' },
+  { key: 'payIntro', label: 'Payment box instruction' },
+  { key: 'paymentName', label: 'Payment name' },
+  { key: 'paymentNumber', label: 'Payment number' },
+  { key: 'dateLabel', label: 'Date paid question' },
+  { key: 'monthsLabel', label: 'Months question' },
+  { key: 'amountLabel', label: 'Amount question' },
+  { key: 'screenshotLabel', label: 'Screenshot question' }
+];
+const FORM_TEXT_DEFAULTS = {};
+function captureFormTextDefaults() {
+  document.querySelectorAll('[data-setting]').forEach(function (el) {
+    FORM_TEXT_DEFAULTS[el.getAttribute('data-setting')] = el.textContent.trim();
+  });
+}
+function buildQuestionFields() {
+  const host = $('#settingsQuestions');
+  if (!host) return;
+  host.innerHTML = EDITABLE_TEXT_FIELDS.map(function (field) {
+    return '<div class="field"><label for="q-' + field.key + '">' + esc(field.label) + '</label>' +
+      '<input type="text" id="q-' + field.key + '" data-question-key="' + field.key + '" maxlength="240"></div>';
+  }).join('');
+}
+function questionText(key) {
+  const q = currentSettings().questions || {};
+  if (typeof q[key] === 'string' && q[key].trim()) return q[key];
+  return FORM_TEXT_DEFAULTS[key] || '';
+}
+function applyFormText() {
+  document.querySelectorAll('[data-setting]').forEach(function (el) {
+    const value = questionText(el.getAttribute('data-setting'));
+    if (el.textContent !== value) el.textContent = value;
+  });
+  const payLink = $('#payNumberLink');
+  if (payLink) {
+    const digits = questionText('paymentNumber').replace(/\D/g, '');
+    if (digits) payLink.href = 'tel:' + digits;
+  }
+}
 const DEFAULT_SETTINGS = {
   title: 'Join Anything Economics',
   subtitle: 'Private tuition with Muhadeen, clear explanations, past questions and a plan that fits your week. Fill this in after making payment.',
@@ -1967,6 +2060,7 @@ function applySettings() {
   if (submit && !state.registrationBusy) submit.textContent = s.submitLabel;
   const note = $('#submitNote');
   if (note) note.textContent = s.contactNote;
+  applyFormText();
   const view = $('#view-register');
   if (view) {
     const accent = isHexColour(s.accent) ? s.accent : DEFAULT_SETTINGS.accent;
@@ -1992,6 +2086,11 @@ function fillSettingsForm() {
   set('setSubtitle', s.subtitle);
   set('setSubmitLabel', s.submitLabel);
   set('setContactNote', s.contactNote);
+  document.querySelectorAll('[data-question-key]').forEach(function (input) {
+    const key = input.getAttribute('data-question-key');
+    const custom = (s.questions || {})[key];
+    input.value = typeof custom === 'string' ? custom : (FORM_TEXT_DEFAULTS[key] || '');
+  });
   const accent = isHexColour(s.accent) ? s.accent : DEFAULT_SETTINGS.accent;
   set('setAccent', accent);
   set('setAccentText', accent);
@@ -2025,6 +2124,15 @@ function loadSettings() {
     return null;
   });
 }
+function collectQuestions() {
+  const out = {};
+  document.querySelectorAll('[data-question-key]').forEach(function (input) {
+    const key = input.getAttribute('data-question-key');
+    const value = (input.value || '').trim();
+    if (value !== (FORM_TEXT_DEFAULTS[key] || '')) out[key] = value;
+  });
+  return out;
+}
 function saveSettings() {
   if (state.settingsBusy) return;
   const status = $('#settingsStatus');
@@ -2041,6 +2149,7 @@ function saveSettings() {
     subtitle: ($('#setSubtitle').value || '').trim(),
     submitLabel: ($('#setSubmitLabel').value || '').trim() || DEFAULT_SETTINGS.submitLabel,
     contactNote: ($('#setContactNote').value || '').trim(),
+    questions: collectQuestions(),
     accent: accent,
     headerImage: state.headerImage !== null ? state.headerImage : ((state.settings && state.settings.headerImage) || ''),
     headerImageName: state.headerImageName !== null
