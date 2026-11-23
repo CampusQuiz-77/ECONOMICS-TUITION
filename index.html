@@ -472,6 +472,13 @@ input.invalid, select.invalid, textarea.invalid { border-color: var(--danger); b
 }
 .whatsapp-link:hover { border-color: var(--success); }
 .whatsapp-link svg { width: 13px; height: 13px; }
+.wa-mini {
+  display: inline-flex; align-items: center; margin-left: 7px; padding: 2px 8px;
+  border-radius: 999px; background: var(--success-bg); color: var(--success);
+  border: 1px solid var(--border); font-size: .66rem; font-weight: 800;
+  text-decoration: none; white-space: nowrap; vertical-align: middle;
+}
+.wa-mini:hover { border-color: var(--success); }
 
 /* ---------- dashboard ---------- */
 .dash-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 22px; }
@@ -2488,6 +2495,22 @@ function downloadReceipt() {
   }
   downloadReceiptHtml(receipt);
 }
+function whatsappDmHref(phone, name, reference) {
+  let digits = String(phone || '').replace(/\D/g, '');
+  if (digits.indexOf('00233') === 0) digits = digits.slice(2);
+  if (/^0\d{9}$/.test(digits)) digits = '233' + digits.slice(1);
+  if (!/^\d{7,15}$/.test(digits)) return '#';
+  const shortRef = String(reference || '').slice(-8).toUpperCase();
+  const message = 'Hello ' + (name || 'there') +
+    ', your payment for Anything Economics Private Tuition has been verified and confirmed. Your place is confirmed.' +
+    (shortRef ? ' Reference: ' + shortRef + '.' : '');
+  return 'https://wa.me/' + digits + '?text=' + encodeURIComponent(message);
+}
+function whatsappStudentLink(phone, name, reference) {
+  const href = whatsappDmHref(phone, name, reference);
+  if (href === '#') return '';
+  return '<a class="wa-mini" href="' + esc(href) + '" target="_blank" rel="noopener" title="Message ' + esc(name) + ' on WhatsApp" aria-label="Message ' + esc(name) + ' on WhatsApp">WhatsApp</a>';
+}
 function showThankYou(data) {
   const card = $('#thankYouCard');
   const formCard = $('#registerCard');
@@ -2496,13 +2519,9 @@ function showThankYou(data) {
   $('#thankName').textContent = data.name;
   const wa = $('#thankWhatsappLink');
   if (wa) {
-    let phoneDigits = String(data.phone || '').replace(/\D/g, '');
-    if (phoneDigits.indexOf('00233') === 0) phoneDigits = phoneDigits.slice(2);
-    if (/^0\d{9}$/.test(phoneDigits)) phoneDigits = '233' + phoneDigits.slice(1);
-    if (phoneDigits) {
-      const shortRef = String(data.reference || '').slice(-8).toUpperCase();
-      const message = 'Hello ' + data.name + ', your registration for Anything Economics Private Tuition has been received and we shall confirm your payment on WhatsApp. Reference: ' + shortRef + '.';
-      wa.href = 'https://wa.me/' + phoneDigits + '?text=' + encodeURIComponent(message);
+    const waHref = whatsappDmHref(data.phone, data.name, data.reference);
+    if (waHref !== '#') {
+      wa.href = waHref;
       wa.classList.remove('hidden');
     } else {
       wa.classList.add('hidden');
@@ -2896,8 +2915,9 @@ function renderStudents() {
   body.innerHTML = rows.map(function (s) {
     const d = daysLabel(s.daysLeft);
     const monthCount = s.months.length;
+    const studentRef = s.payments.length ? s.payments[s.payments.length - 1].id : '';
     return '<tr>' +
-      '<td data-label="Student"><div class="student-cell"><strong>' + esc(s.name) + '</strong><span>' + (s.email ? esc(s.email) : 'Student record') + '</span></div></td>' +
+      '<td data-label="Student"><div class="student-cell"><strong>' + esc(s.name) + whatsappStudentLink(s.phone, s.name, studentRef) + '</strong><span>' + (s.email ? esc(s.email) : 'Student record') + '</span></div></td>' +
       '<td data-label="Phone" class="nowrap">' + esc(s.phone || '-') + '</td>' +
       '<td data-label="Courses"><div class="course-chips">' + courseChips(s.courses) + '</div></td>' +
       '<td data-label="Total paid" class="num"><span class="amount-strong">' + esc(money(s.totalPaid)) + '</span></td>' +
@@ -2918,6 +2938,7 @@ function renderPayments() {
   const body = $('#paymentsBody');
   if (!body) return;
   body.innerHTML = state.payments.map(function (p) {
+    const waLink = whatsappStudentLink(p.phone, p.name, p.id);
     const warning = p._exact ? '' :
       '<div class="warn-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>Amount is not a multiple of ' + esc(money(p._expectedRate)) + '</div>';
     const coverage = p._coverageDays > 0
@@ -2925,7 +2946,7 @@ function renderPayments() {
       : '<span class="badge badge-expired">No cover</span>';
     return '<tr>' +
       '<td data-label="Date paid" class="nowrap">' + esc(fmtDate(p._paidDate)) + '</td>' +
-      '<td data-label="Student"><div class="student-cell"><strong>' + esc(p.name) + '</strong><span>' + esc(p.phone) + '</span></div></td>' +
+      '<td data-label="Student"><div class="student-cell"><strong>' + esc(p.name) + waLink + '</strong><span>' + esc(p.phone) + '</span></div></td>' +
       '<td data-label="Courses"><div class="course-chips">' + courseChips(p.courses) + '</div></td>' +
       '<td data-label="Amount" class="num"><span class="amount-strong">' + esc(money(p.amount)) + '</span>' + warning + '</td>' +
       '<td data-label="Payment covers" class="nowrap">' + coverage + '</td>' +
