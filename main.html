@@ -54,7 +54,7 @@ const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const fmt=d=>new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
 const money=n=>"GH₵ "+Number(n||0).toLocaleString("en-GB",{maximumFractionDigits:2});
 const today=()=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate())};
-const firebaseConfig={apiKey:"PASTE_API_KEY",authDomain:"PASTE_AUTH_DOMAIN",projectId:"PASTE_PROJECT_ID",appId:"PASTE_APP_ID"};
+const firebaseConfig={apiKey:"AIzaSyB4TGS85JMvUW8ZfKPrmkGb-gkyqTWoePw",authDomain:"economics-tuition.firebaseapp.com",projectId:"economics-tuition",appId:"1:1068254196488:web:b92a7d3503d0a934acb2bd"};
 let fdb,auth,pays=[],tab="dash",charts=[],q="",loadErr="";
 function init(){
   if(firebaseConfig.apiKey.startsWith("PASTE")){$("#app").innerHTML='<div class="card"><h2>Setup needed</h2><p>Open index.html and paste your Firebase config at the top of the script (see README.md).</p></div>';return}
