@@ -362,6 +362,23 @@ input.invalid, select.invalid, textarea.invalid { border-color: var(--danger); b
 .payment-detail span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 750; }
 .payment-detail strong, .payment-detail a { display: block; margin-top: 3px; font-size: 1rem; font-weight: 850; color: var(--brown-deep); text-decoration: none; }
 .payment-detail a:hover { text-decoration: underline; }
+.method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.method-option {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 13px;
+  border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+  background: var(--surface); transition: border-color .15s ease, background .15s ease;
+}
+.method-option:has(input:checked) { border-color: var(--brown); background: color-mix(in srgb, var(--brown) 7%, var(--surface)); }
+.method-option input { margin-top: 2px; accent-color: var(--brown); flex: 0 0 auto; }
+.method-body strong { display: block; font-size: .9rem; }
+.method-body span { display: block; font-size: .78rem; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+.cash-details {
+  margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--border-strong);
+  border-radius: 12px; background: color-mix(in srgb, var(--brown) 6%, var(--surface));
+}
+.cash-check { display: flex; align-items: flex-start; gap: 9px; }
+.cash-check input { margin-top: 2px; accent-color: var(--brown); width: 17px; height: 17px; flex: 0 0 auto; }
+.cash-check label { font-size: .88rem; font-weight: 700; cursor: pointer; }
 .questions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .questions-title { grid-column: 1 / -1; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--border); font-size: .9rem; font-weight: 850; color: var(--brown-deep); }
 .settings-status.ok { color: var(--success); }
@@ -757,7 +774,7 @@ body.offline .offline-note { display: block; }
   .form-grid { grid-template-columns: 1fr; }
   .amount-row { grid-template-columns: 1fr; }
   .settings-grid { grid-template-columns: 1fr; }
-  .payment-details-grid, .questions-grid { grid-template-columns: 1fr; }
+  .payment-details-grid, .questions-grid, .method-grid { grid-template-columns: 1fr; }
   .board-frame { border-width: 6px; }
   .course-grid { grid-template-columns: 1fr; }
   .course-tile-inner { min-height: 62px; padding: 11px 12px; }
@@ -958,6 +975,20 @@ body.offline .offline-note { display: block; }
                 <h2 data-setting="s3Title">Payment details</h2>
                 <p data-setting="s3Intro">Each month is 30 days, starting from your payment date.</p>
               </div>
+              <div class="field span-2">
+                <label>Payment method</label>
+                <div class="method-grid" role="radiogroup" aria-label="Payment method">
+                  <label class="method-option">
+                    <input type="radio" name="paymentMethod" value="momo" id="methodMomo" checked>
+                    <span class="method-body"><strong>Mobile money</strong><span>Pay to the number below, then upload the screenshot.</span></span>
+                  </label>
+                  <label class="method-option">
+                    <input type="radio" name="paymentMethod" value="cash" id="methodCash">
+                    <span class="method-body"><strong>Cash</strong><span>Bring the cash to class. No screenshot needed.</span></span>
+                  </label>
+                </div>
+                <p class="field-error" data-error-for="paymentMethod"></p>
+              </div>
               <div class="payment-details" id="paymentDetails">
                 <div class="payment-details-head">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h4"/></svg>
@@ -976,6 +1007,13 @@ body.offline .offline-note { display: block; }
                     <a href="tel:0509937611" id="payNumberLink" data-setting="paymentNumber">0509937611</a>
                   </div>
                 </div>
+              </div>
+              <div class="cash-details hidden" id="cashDetails">
+                <div class="cash-check">
+                  <input type="checkbox" id="cashConfirmed">
+                  <label for="cashConfirmed">I have already told Muhadeen that I am paying cash.</label>
+                </div>
+                <p class="field-error" data-error-for="cashConfirmed"></p>
               </div>
               <div class="form-grid">
                 <div class="field">
@@ -1007,7 +1045,7 @@ body.offline .offline-note { display: block; }
                   <p class="field-error" data-error-for="amount"></p>
                   <p class="amount-note" id="amountNote"></p>
                 </div>
-                <div class="field">
+                <div class="field" id="screenshotField">
                   <label for="regScreenshot" data-setting="screenshotLabel">Payment screenshot</label>
                   <div class="upload-zone" id="uploadZone">
                     <input type="file" id="regScreenshot" accept="image/jpeg,image/png,image/webp,image/*" class="hidden">
@@ -1059,7 +1097,10 @@ body.offline .offline-note { display: block; }
         </div>
         <span class="eyebrow" style="justify-content:center;">Registration received</span>
         <h1>Thank you, <span id="thankName">student</span>!
-         
+          <a class="whatsapp-link hidden" id="thankWhatsappLink" href="#" target="_blank" rel="noopener" aria-label="Message this student on WhatsApp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20l1.2-5.3A8.4 8.4 0 1 1 21 11.5Z"/><path d="M8.5 9.2c.2 2.4 2.4 4.6 4.8 4.8l1.4-1.4 2.1 1.1c-.5 1.1-1.5 1.7-2.8 1.7A6.6 6.6 0 0 1 7.2 9.2c0-1.3.6-2.3 1.7-2.8l1.1 2.1-1.5 1.4Z"/></svg>
+            Message on WhatsApp
+          </a>
         </h1>
         <p class="muted" id="thankMessage">Your registration has been received and we shall confirm your payment on WhatsApp.</p>
         <div class="receipt" id="thankReceipt"></div>
@@ -1597,6 +1638,7 @@ function groupAndCompute(rawPayments) {
       months: Number(p.months) || 1,
       paidDate: String(p.paidDate || ''),
       source: String(p.source || 'form'),
+      paymentMethod: String(p.paymentMethod || 'momo'),
       dedupeKey: String(p.dedupeKey || ''),
       hasScreenshot: Boolean(p.hasScreenshot),
       createdAt: p.createdAt || null,
@@ -2238,11 +2280,28 @@ function buildCourseGrid() {
 function selectedCourses() {
   return $$('#courseGrid input[name="courses"]:checked').map(function (input) { return input.value; });
 }
+function paymentMethod() {
+  const checked = $('input[name="paymentMethod"]:checked');
+  return checked ? checked.value : 'momo';
+}
+function syncPaymentMethod() {
+  const isCash = paymentMethod() === 'cash';
+  const momoBox = $('#paymentDetails');
+  const cashBox = $('#cashDetails');
+  const shotField = $('#screenshotField');
+  if (momoBox) momoBox.classList.toggle('hidden', isCash);
+  if (cashBox) cashBox.classList.toggle('hidden', !isCash);
+  if (shotField) shotField.classList.toggle('hidden', isCash);
+  clearFieldError('paymentMethod');
+  clearFieldError(isCash ? 'screenshot' : 'cashConfirmed');
+  updateBillingPreview();
+}
 function fieldInput(name) {
   const map = {
     name: '#regName', phone: '#regPhone', email: '#regEmail',
     courses: '#courseGrid', paidDate: '#regPaidDate', months: '#regMonths',
-    amount: '#regAmount', screenshot: '#regScreenshot'
+    amount: '#regAmount', screenshot: '#regScreenshot',
+    paymentMethod: '#methodMomo', cashConfirmed: '#cashConfirmed'
   };
   return $(map[name] || '');
 }
@@ -2259,7 +2318,7 @@ function clearFieldError(name) {
   if (input && input.classList) input.classList.remove('invalid');
 }
 function clearAllRegErrors() {
-  ['name', 'phone', 'email', 'courses', 'paidDate', 'months', 'amount', 'screenshot'].forEach(clearFieldError);
+  ['name', 'phone', 'email', 'courses', 'paidDate', 'months', 'amount', 'screenshot', 'paymentMethod', 'cashConfirmed'].forEach(clearFieldError);
   const alert = $('#registerAlert');
   if (alert) { alert.innerHTML = ''; alert.classList.remove('show'); }
 }
@@ -2290,7 +2349,12 @@ function updateBillingPreview() {
   if (!banner || !title || !text || !meta || !note) return;
 
   const expected = courses.length * RATE_PER_COURSE * months;
-  if (courses.length && amount > 0 && Math.abs(amount - expected) > 0.005) {
+  if (paymentMethod() === 'cash') {
+    note.textContent = courses.length
+      ? 'Calculated at ' + money(RATE_PER_COURSE) + ' per course per month. Bring this amount in cash to class.'
+      : '';
+    note.classList.remove('warn');
+  } else if (courses.length && amount > 0 && Math.abs(amount - expected) > 0.005) {
     note.textContent = 'For ' + courses.length + ' course(s) × ' + months + ' month(s), the usual amount is ' +
       money(expected) + '. You can still edit the amount if that is what you paid.';
     note.classList.add('warn');
@@ -2441,8 +2505,21 @@ function validateRegistration() {
   else if (paidDate.getTime() > todayStart().getTime()) { setFieldError('paidDate', 'The payment date cannot be in the future.'); errors.push('Date paid'); }
   if (!Number.isInteger(months) || months < 1 || months > 6) { setFieldError('months', 'Choose between 1 and 6 months.'); errors.push('Months'); }
   if (!isFinite(amount) || amount <= 0 || amount > 1000000) { setFieldError('amount', 'Enter the amount you paid (greater than GH₵0).'); errors.push('Amount paid'); }
-  if (state.screenshotProcessing) { setFieldError('screenshot', 'Please wait for the screenshot to finish compressing.'); errors.push('Screenshot'); }
+  const method = paymentMethod();
+  if (method === 'momo') {
+    if (state.screenshotProcessing) { setFieldError('screenshot', 'Please wait for the screenshot to finish compressing.'); errors.push('Payment screenshot'); }
+    else if (!state.screenshot) { setFieldError('screenshot', 'Upload a screenshot of your mobile money payment.'); errors.push('Payment screenshot'); }
+  } else {
+    const confirmed = $('#cashConfirmed') && $('#cashConfirmed').checked;
+    if (!confirmed) {
+      setFieldError('cashConfirmed', 'Confirm that you have already told Muhadeen about your cash payment.');
+      errors.push('Cash confirmation');
+    }
+  }
   return errors;
+}
+function paymentMethodLabel(receipt) {
+  return receipt && receipt.paymentMethod === 'cash' ? 'Cash' : 'Mobile money';
 }
 function subscriptionPlanText(receipt) {
   const courseCount = receipt.courses.length;
@@ -2478,6 +2555,7 @@ function downloadReceiptHtml(receipt) {
     ['Email', receipt.email ? esc(receipt.email) : '-'],
     ['Course(s)', esc(receiptCourseList(receipt))],
     ['Plan', esc(subscriptionPlanText(receipt))],
+    ['Payment method', esc(paymentMethodLabel(receipt))],
     ['Monthly rate', 'GHS 100 per course per month'],
     ['Amount paid', 'GHS ' + Number(receipt.amount || 0).toFixed(2)],
     ['Date paid', esc(fmtDateFull(receipt.paidDate))],
@@ -2571,6 +2649,7 @@ function downloadReceipt() {
       y += 4;
       section('Subscription summary');
       row('Plan', subscriptionPlanText(receipt));
+      row('Payment method', paymentMethodLabel(receipt));
       row('Monthly rate', 'GHS 100 per course per month');
       row('Amount paid', ghs(receipt.amount));
       row('Date paid', fmtDateFull(receipt.paidDate));
@@ -2639,6 +2718,7 @@ function showThankYou(data) {
     amount: data.amount,
     months: data.months,
     days: data.days,
+    paymentMethod: data.paymentMethod || 'momo',
     paidDate: data.paidDate,
     renewalDate: data.renewalDate,
     issuedAt: new Date()
@@ -2650,6 +2730,7 @@ function showThankYou(data) {
     ['WhatsApp', esc(data.phone)],
     ['Course(s)', data.courses.map(function (code) { return '<span class="chip">' + esc(code) + '</span>'; }).join('')],
     ['Subscription', esc(subscriptionPlanText(state.lastReceipt))],
+    ['Method', esc(paymentMethodLabel(state.lastReceipt))],
     ['Amount paid', esc(money(data.amount))],
     ['Date paid', esc(fmtDate(data.paidDate))],
     ['Renewal date', esc(fmtDateFull(data.renewalDate)), true]
@@ -2679,6 +2760,13 @@ function resetRegistration() {
   dateInput.value = today;
   dateInput.max = today;
   $('#regAmount').value = '';
+  const momoRadio = $('#methodMomo');
+  if (momoRadio) momoRadio.checked = true;
+  const cashConfirm = $('#cashConfirmed');
+  if (cashConfirm) cashConfirm.checked = false;
+  const shotInput = $('#regScreenshot');
+  if (shotInput) shotInput.value = '';
+  syncPaymentMethod();
   $('#thankYouCard').classList.add('hidden');
   $('#registerCard').classList.remove('hidden');
   const btn = $('#submitRegBtn');
@@ -2751,6 +2839,7 @@ function bindRegisterEvents() {
       const paidDate = parseDateOnly(paidDateValue);
       const months = Number($('#regMonths').value);
       const amount = Math.round(Number($('#regAmount').value) * 100) / 100;
+      const method = paymentMethod();
       const days = paymentDays({ courses: courses, amount: amount });
       const renewalDate = addDays(paidDate, days);
       const payload = {
@@ -2762,8 +2851,9 @@ function bindRegisterEvents() {
         months: months,
         paidDate: paidDateValue,
         source: 'form',
+        paymentMethod: method,
         dedupeKey: makeDedupeKey({ name: name, phone: phone, paidDate: paidDateValue, amount: amount, courses: courses }),
-        hasScreenshot: Boolean(state.screenshot),
+        hasScreenshot: method === 'momo' && Boolean(state.screenshot),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
@@ -2774,7 +2864,7 @@ function bindRegisterEvents() {
 
       const paymentRef = db.collection('payments').doc();
       paymentRef.set(payload).then(function () {
-        if (!state.screenshot) return true;
+        if (method !== 'momo' || !state.screenshot) return true;
         return db.collection('screenshots').doc(paymentRef.id).set({
           paymentId: paymentRef.id,
           data: state.screenshot.dataUrl,
@@ -2791,7 +2881,8 @@ function bindRegisterEvents() {
         showThankYou({
           reference: paymentRef.id, name: name, phone: phone, email: email,
           courses: courses, amount: amount, months: months, days: days,
-          paidDate: paidDate, renewalDate: renewalDate, screenshotWarning: screenshotOk === false
+          paymentMethod: method, paidDate: paidDate, renewalDate: renewalDate,
+          screenshotWarning: screenshotOk === false
         });
         toast('Registration received.', 'success');
       }).catch(function (error) {
@@ -2811,7 +2902,12 @@ function bindRegisterEvents() {
   if (again) again.addEventListener('click', function () { resetRegistration(); });
   const download = $('#downloadReceiptBtn');
   if (download) download.addEventListener('click', downloadReceipt);
-  updateBillingPreview();
+  document.querySelectorAll('input[name="paymentMethod"]').forEach(function (input) {
+    input.addEventListener('change', syncPaymentMethod);
+  });
+  const confirmCash = $('#cashConfirmed');
+  if (confirmCash) confirmCash.addEventListener('change', function () { clearFieldError('cashConfirmed'); });
+  syncPaymentMethod();
   showUploadUI();
 }
 
@@ -3049,7 +3145,7 @@ function renderPayments() {
       : '<span class="badge badge-expired">No cover</span>';
     return '<tr>' +
       '<td data-label="Date paid" class="nowrap">' + esc(fmtDate(p._paidDate)) + '</td>' +
-      '<td data-label="Student"><div class="student-cell"><strong>' + esc(p.name) + waLink + '</strong><span>' + esc(p.phone) + '</span></div></td>' +
+      '<td data-label="Student"><div class="student-cell"><strong>' + esc(p.name) + waLink + '</strong><span>' + esc(p.phone) + ' · ' + (p.paymentMethod === 'cash' ? 'Cash' : 'MoMo') + '</span></div></td>' +
       '<td data-label="Courses"><div class="course-chips">' + courseChips(p.courses) + '</div></td>' +
       '<td data-label="Amount" class="num"><span class="amount-strong">' + esc(money(p.amount)) + '</span>' + warning + '</td>' +
       '<td data-label="Payment covers" class="nowrap">' + coverage + '</td>' +
@@ -3350,6 +3446,7 @@ function exportExcel() {
         'Coverage starts': toISODate(p._coverageStart),
         'Paid until': toISODate(p._coverageEnd),
         'Source': p.source,
+        'Payment method': paymentMethodLabel(p),
         'Screenshot attached': p.hasScreenshot ? 'Yes' : 'No'
       };
     });
@@ -3637,7 +3734,7 @@ function parseImportFile(file) {
         payload: {
           name: name, phone: phone, email: email, courses: courses,
           amount: Math.round(amount * 100) / 100, months: months, paidDate: paidDate,
-          source: 'import', dedupeKey: key, hasScreenshot: false,
+          source: 'import', paymentMethod: 'momo', dedupeKey: key, hasScreenshot: false,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }
       });
