@@ -379,6 +379,10 @@ input.invalid, select.invalid, textarea.invalid { border-color: var(--danger); b
 .cash-check { display: flex; align-items: flex-start; gap: 9px; }
 .cash-check input { margin-top: 2px; accent-color: var(--brown); width: 17px; height: 17px; flex: 0 0 auto; }
 .cash-check label { font-size: .88rem; font-weight: 700; cursor: pointer; }
+.toggle-row { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.toggle-row input { margin-top: 3px; accent-color: var(--brown); width: 18px; height: 18px; flex: 0 0 auto; }
+.toggle-row strong { display: block; font-size: .9rem; }
+.toggle-row .hint { margin-top: 3px; }
 .questions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
 .questions-title { grid-column: 1 / -1; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--border); font-size: .9rem; font-weight: 850; color: var(--brown-deep); }
 .settings-status.ok { color: var(--success); }
@@ -882,7 +886,7 @@ body.offline .offline-note { display: block; }
           <span class="brand-mark" aria-hidden="true">AE</span>
           <span class="eyebrow">Welcome back</span>
           <h2 id="loginTitle">Tutor sign in</h2>
-          <p class="muted small" style="margin-bottom:24px;">Sign in with your email and password. If you are just registering for the tuition, click "Student Registration" below.</p>
+          <p class="muted small" style="margin-bottom:24px;">Use the email and password you created in Firebase Authentication.</p>
           <form id="loginForm" novalidate>
             <div class="form-alert" id="loginError" role="alert"></div>
             <div class="field">
@@ -899,7 +903,7 @@ body.offline .offline-note { display: block; }
               <a href="#register" style="text-decoration:none;font-weight:750;">Student registration →</a>
             </div>
           </form>
-          <p class="auth-foot">Only the tutor account can read student information. There is no public sign-up.</p>
+          <p class="auth-foot">Only the tutor account can read student information. There is no public sign-up. <a href="#register">Student registration</a></p>
         </div>
       </div>
     </div>
@@ -982,7 +986,7 @@ body.offline .offline-note { display: block; }
                     <input type="radio" name="paymentMethod" value="momo" id="methodMomo" checked>
                     <span class="method-body"><strong>Mobile money</strong><span>Pay to the number below, then upload the screenshot.</span></span>
                   </label>
-                  <label class="method-option">
+                  <label class="method-option" id="methodCashOption">
                     <input type="radio" name="paymentMethod" value="cash" id="methodCash">
                     <span class="method-body"><strong>Cash</strong><span>Bring the cash to class. No screenshot needed.</span></span>
                   </label>
@@ -1085,7 +1089,7 @@ body.offline .offline-note { display: block; }
 
             <div class="submit-row">
               <button type="submit" class="btn btn-primary btn-block" id="submitRegBtn">Complete registration</button>
-              <p class="submit-note" id="submitNote">We will confirm your payment on WhatsApp.</p>
+              <p class="submit-note" id="submitNote">Muhadeen will confirm your payment on WhatsApp.</p>
             </div>
           </form>
         </div>
@@ -1097,7 +1101,10 @@ body.offline .offline-note { display: block; }
         </div>
         <span class="eyebrow" style="justify-content:center;">Registration received</span>
         <h1>Thank you, <span id="thankName">student</span>!
-          
+          <a class="whatsapp-link hidden" id="thankWhatsappLink" href="#" target="_blank" rel="noopener" aria-label="Message this student on WhatsApp">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20l1.2-5.3A8.4 8.4 0 1 1 21 11.5Z"/><path d="M8.5 9.2c.2 2.4 2.4 4.6 4.8 4.8l1.4-1.4 2.1 1.1c-.5 1.1-1.5 1.7-2.8 1.7A6.6 6.6 0 0 1 7.2 9.2c0-1.3.6-2.3 1.7-2.8l1.1 2.1-1.5 1.4Z"/></svg>
+            Message on WhatsApp
+          </a>
         </h1>
         <p class="muted" id="thankMessage">Your registration has been received and we shall confirm your payment on WhatsApp.</p>
         <div class="receipt" id="thankReceipt"></div>
@@ -1139,6 +1146,8 @@ body.offline .offline-note { display: block; }
         <button type="button" class="tab active" data-tab="overview">Overview</button>
         <button type="button" class="tab" data-tab="students">Students</button>
         <button type="button" class="tab" data-tab="payments">Payments</button>
+        <button type="button" class="tab" data-tab="receipts">Receipts</button>
+        <button type="button" class="tab" data-tab="excel">Excel view</button>
         <button type="button" class="tab" data-tab="import">Import</button>
         <button type="button" class="tab" data-tab="share">Share form</button>
         <button type="button" class="tab" data-tab="settings">Edit form</button>
@@ -1244,6 +1253,61 @@ body.offline .offline-note { display: block; }
           </div>
         </section>
 
+        <section class="tab-panel hidden" id="panel-receipts">
+          <div class="panel-toolbar">
+            <div>
+              <h2>Receipts</h2>
+              <p id="receiptsCount" class="muted small">0 receipts</p>
+            </div>
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="search" id="receiptSearch" placeholder="Search name, phone or reference…" aria-label="Search receipts">
+            </div>
+          </div>
+          <div class="card table-card">
+            <div class="table-wrap">
+              <table class="data-table" id="receiptsTable">
+                <thead>
+                  <tr>
+                    <th>Reference</th><th>Issued</th><th>Student</th><th>Subscription</th>
+                    <th class="num">Amount</th><th>Method</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="receiptsBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state hidden" id="receiptsEmpty">No receipts yet.</div>
+          </div>
+        </section>
+
+        <section class="tab-panel hidden" id="panel-excel">
+          <div class="panel-toolbar">
+            <div>
+              <h2>Excel view</h2>
+              <p id="excelCount" class="muted small">0 rows</p>
+            </div>
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="search" id="excelSearch" placeholder="Search any column…" aria-label="Search Excel view">
+            </div>
+          </div>
+          <div class="card table-card">
+            <div class="table-wrap">
+              <table class="data-table" id="excelTable">
+                <thead>
+                  <tr>
+                    <th>Date paid</th><th>Reference</th><th>Student</th><th>Phone</th><th>Email</th>
+                    <th>Courses</th><th class="num">Amount</th><th>Months</th><th>Covered</th>
+                    <th>Paid until</th><th>Source</th><th>Method</th><th>Screenshot</th>
+                  </tr>
+                </thead>
+                <tbody id="excelBody"></tbody>
+              </table>
+            </div>
+            <div class="empty-state hidden" id="excelEmpty">No rows yet.</div>
+          </div>
+        </section>
+
         <section class="tab-panel hidden" id="panel-import">
           <div class="card card-pad import-card">
             <span class="eyebrow">Bring your history</span>
@@ -1324,6 +1388,12 @@ body.offline .offline-note { display: block; }
               <div class="field span-2">
                 <label for="setContactNote">Note under the submit button</label>
                 <textarea id="setContactNote" maxlength="300" placeholder="Muhadeen will confirm your payment on WhatsApp."></textarea>
+              </div>
+              <div class="field span-2">
+                <label class="toggle-row" for="setCashEnabled">
+                  <input type="checkbox" id="setCashEnabled">
+                  <span><strong>Show cash payment option</strong><span class="hint">When off, students can only pay by mobile money.</span></span>
+                </label>
               </div>
               <div class="questions-title span-2">Questions and wording</div>
               <div class="questions-grid span-2" id="settingsQuestions"></div>
@@ -1438,6 +1508,8 @@ const state = {
   dataLoading: false,
   activeTab: 'overview',
   studentSearch: '',
+  receiptSearch: '',
+  excelSearch: '',
   registrationSubmitted: false,
   registrationBusy: false,
   lastReceipt: null,
@@ -1807,7 +1879,11 @@ function renderHeader() {
 }
 
 function route() {
-  const raw = location.hash.replace(/^#\/?/, '').split('?')[0].toLowerCase();
+  const raw = location.hash.replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, '').toLowerCase();
+  if (!raw && state.authReady && !state.user) {
+    location.replace('#register');
+    return;
+  }
   const onRegister = raw === 'register';
   const previous = state.route;
   state.route = onRegister ? 'register' : 'app';
@@ -2080,12 +2156,24 @@ const DEFAULT_SETTINGS = {
   subtitle: 'Private tuition with Muhadeen, clear explanations, past questions and a plan that fits your week. Fill this in after making payment.',
   submitLabel: 'Complete registration',
   contactNote: 'Muhadeen will confirm your payment on WhatsApp.',
+  cashEnabled: false,
   accent: '#8B6540',
   headerImage: '',
   headerImageName: ''
 };
 function currentSettings() { return Object.assign({}, DEFAULT_SETTINGS, state.settings || {}); }
 function isHexColour(value) { return /^#[0-9a-f]{6}$/i.test(String(value || '')); }
+function cashEnabled() { return currentSettings().cashEnabled === true; }
+function activePaymentMethod() { return cashEnabled() ? paymentMethod() : 'momo'; }
+function syncCashOption() {
+  const option = $('#methodCashOption');
+  if (option) option.classList.toggle('hidden', !cashEnabled());
+  if (!cashEnabled()) {
+    const momo = $('#methodMomo');
+    if (momo) momo.checked = true;
+  }
+  syncPaymentMethod();
+}
 function applySettings() {
   const s = currentSettings();
   const title = $('#regTitle');
@@ -2097,6 +2185,7 @@ function applySettings() {
   const note = $('#submitNote');
   if (note) note.textContent = s.contactNote;
   applyFormText();
+  syncCashOption();
   const view = $('#view-register');
   if (view) {
     const accent = isHexColour(s.accent) ? s.accent : DEFAULT_SETTINGS.accent;
@@ -2122,6 +2211,8 @@ function fillSettingsForm() {
   set('setSubtitle', s.subtitle);
   set('setSubmitLabel', s.submitLabel);
   set('setContactNote', s.contactNote);
+  const cashToggle = $('#setCashEnabled');
+  if (cashToggle) cashToggle.checked = s.cashEnabled === true;
   document.querySelectorAll('[data-question-key]').forEach(function (input) {
     const key = input.getAttribute('data-question-key');
     const custom = (s.questions || {})[key];
@@ -2185,6 +2276,7 @@ function saveSettings() {
     subtitle: ($('#setSubtitle').value || '').trim(),
     submitLabel: ($('#setSubmitLabel').value || '').trim() || DEFAULT_SETTINGS.submitLabel,
     contactNote: ($('#setContactNote').value || '').trim(),
+    cashEnabled: Boolean($('#setCashEnabled') && $('#setCashEnabled').checked),
     questions: collectQuestions(),
     accent: accent,
     headerImage: state.headerImage !== null ? state.headerImage : ((state.settings && state.settings.headerImage) || ''),
@@ -2502,7 +2594,7 @@ function validateRegistration() {
   else if (paidDate.getTime() > todayStart().getTime()) { setFieldError('paidDate', 'The payment date cannot be in the future.'); errors.push('Date paid'); }
   if (!Number.isInteger(months) || months < 1 || months > 6) { setFieldError('months', 'Choose between 1 and 6 months.'); errors.push('Months'); }
   if (!isFinite(amount) || amount <= 0 || amount > 1000000) { setFieldError('amount', 'Enter the amount you paid (greater than GH₵0).'); errors.push('Amount paid'); }
-  const method = paymentMethod();
+  const method = activePaymentMethod();
   if (method === 'momo') {
     if (state.screenshotProcessing) { setFieldError('screenshot', 'Please wait for the screenshot to finish compressing.'); errors.push('Payment screenshot'); }
     else if (!state.screenshot) { setFieldError('screenshot', 'Upload a screenshot of your mobile money payment.'); errors.push('Payment screenshot'); }
@@ -2582,8 +2674,8 @@ function downloadReceiptHtml(receipt) {
   triggerBlobDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), receiptFileName(receipt, 'html'));
   toast('Receipt downloaded. Open it and print to save as PDF.', 'success');
 }
-function downloadReceipt() {
-  const receipt = state.lastReceipt;
+function downloadReceipt(receiptOverride) {
+  const receipt = receiptOverride || state.lastReceipt;
   if (!receipt) { toast('Your receipt is not ready yet.', 'error'); return; }
   const filename = receiptFileName(receipt, 'pdf');
   const JsPDF = window.jspdf && window.jspdf.jsPDF;
@@ -2836,7 +2928,7 @@ function bindRegisterEvents() {
       const paidDate = parseDateOnly(paidDateValue);
       const months = Number($('#regMonths').value);
       const amount = Math.round(Number($('#regAmount').value) * 100) / 100;
-      const method = paymentMethod();
+      const method = activePaymentMethod();
       const days = paymentDays({ courses: courses, amount: amount });
       const renewalDate = addDays(paidDate, days);
       const payload = {
@@ -2898,7 +2990,7 @@ function bindRegisterEvents() {
   const again = $('#anotherRegistrationBtn');
   if (again) again.addEventListener('click', function () { resetRegistration(); });
   const download = $('#downloadReceiptBtn');
-  if (download) download.addEventListener('click', downloadReceipt);
+  if (download) download.addEventListener('click', function () { downloadReceipt(); });
   document.querySelectorAll('input[name="paymentMethod"]').forEach(function (input) {
     input.addEventListener('change', syncPaymentMethod);
   });
@@ -2973,17 +3065,43 @@ function bindDashboardEvents() {
       renderStudents();
     });
   }
+  const receiptSearch = $('#receiptSearch');
+  if (receiptSearch) {
+    receiptSearch.addEventListener('input', function () {
+      state.receiptSearch = receiptSearch.value.trim().toLowerCase();
+      renderReceipts();
+    });
+  }
+  const excelSearch = $('#excelSearch');
+  if (excelSearch) {
+    excelSearch.addEventListener('input', function () {
+      state.excelSearch = excelSearch.value.trim().toLowerCase();
+      renderExcelView();
+    });
+  }
 
   const paymentsBody = $('#paymentsBody');
   if (paymentsBody) {
     paymentsBody.addEventListener('click', function (event) {
       const view = event.target.closest('[data-action="screenshot"]');
       const del = event.target.closest('[data-action="delete"]');
+      const edit = event.target.closest('[data-action="editdate"]');
+      if (edit) openEditDateModal(edit.getAttribute('data-id'));
       if (view) {
         const payment = state.payments.find(function (p) { return p.id === view.getAttribute('data-id'); });
         if (payment) openScreenshotModal(payment);
       }
       if (del) deletePayment(del.getAttribute('data-id'));
+    });
+  }
+
+  const receiptsBody = $('#receiptsBody');
+  if (receiptsBody) {
+    receiptsBody.addEventListener('click', function (event) {
+      const dl = event.target.closest('[data-action="receipt"]');
+      if (!dl) return;
+      const payment = state.payments.find(function (p) { return p.id === dl.getAttribute('data-id'); });
+      if (payment) downloadReceipt(receiptFromPayment(payment));
     });
   }
 
@@ -3039,7 +3157,7 @@ function copyRegistrationLink() {
   }
 }
 function activateTab(name) {
-  const allowed = ['overview', 'students', 'payments', 'import', 'share', 'settings'];
+  const allowed = ['overview', 'students', 'payments', 'receipts', 'excel', 'import', 'share', 'settings'];
   state.activeTab = allowed.indexOf(name) >= 0 ? name : 'overview';
   $$('.tab').forEach(function (btn) { btn.classList.toggle('active', btn.getAttribute('data-tab') === state.activeTab); });
   $$('.tab-panel').forEach(function (panel) { panel.classList.toggle('hidden', panel.id !== 'panel-' + state.activeTab); });
@@ -3057,6 +3175,8 @@ function renderDashboard() {
   renderStats();
   renderStudents();
   renderPayments();
+  renderReceipts();
+  renderExcelView();
   renderRecent();
   updateShareLink();
   activateTab(state.activeTab);
@@ -3098,6 +3218,93 @@ function monthChips(months) {
     const title = m.status === 'partial' ? range + ' · ' + m.coveredDays + '/30 days covered' : range;
     return '<span class="month-chip ' + m.status + '" title="' + esc(title) + '">M' + m.n + ': ' + labels[m.status] + '</span>';
   }).join('');
+}
+function receiptIssuedAt(p) {
+  const ts = p.createdAt;
+  if (ts && typeof ts.toDate === 'function') return ts.toDate();
+  if (ts) { const d = new Date(ts); if (!isNaN(d.getTime())) return d; }
+  return p._paidDate || parseDateOnly(p.paidDate) || new Date();
+}
+function receiptFromPayment(p) {
+  const days = Number(p._coverageDays) > 0 ? Number(p._coverageDays) : paymentDays(p);
+  const start = p._paidDate || parseDateOnly(p.paidDate) || todayStart();
+  return {
+    reference: p.id, name: p.name, phone: p.phone, email: p.email,
+    courses: p.courses.slice(), amount: p.amount, months: p.months, days: days,
+    paidDate: start, renewalDate: p._coverageEnd || addDays(start, days),
+    issuedAt: receiptIssuedAt(p), paymentMethod: p.paymentMethod || 'momo'
+  };
+}
+function renderReceipts() {
+  const body = $('#receiptsBody');
+  if (!body) return;
+  const query = (state.receiptSearch || '').toLowerCase();
+  const rows = state.payments.filter(function (p) {
+    if (!query) return true;
+    const haystack = [p.id, p.name, p.phone, p.email, money(p.amount)].concat(p.courses).join(' ').toLowerCase();
+    return haystack.indexOf(query) >= 0;
+  });
+  body.innerHTML = rows.map(function (p) {
+    const receipt = receiptFromPayment(p);
+    const shortRef = String(p.id).slice(-8).toUpperCase();
+    return '<tr>' +
+      '<td data-label="Reference"><span class="tiny" title="' + esc(p.id) + '">' + esc(shortRef) + '</span></td>' +
+      '<td data-label="Issued" class="nowrap">' + esc(fmtDateFull(receipt.issuedAt)) + '</td>' +
+      '<td data-label="Student"><div class="student-cell"><strong>' + esc(p.name) + '</strong><span>' + esc(p.phone) + '</span></div></td>' +
+      '<td data-label="Subscription">' + esc(subscriptionPlanText(receipt)) + '</td>' +
+      '<td data-label="Amount" class="num"><span class="amount-strong">' + esc(money(p.amount)) + '</span></td>' +
+      '<td data-label="Method">' + esc(paymentMethodLabel(p)) + '</td>' +
+      '<td data-label="Actions"><div class="table-actions"><button type="button" class="btn btn-sm btn-outline" data-action="receipt" data-id="' + esc(p.id) + '">Download</button></div></td>' +
+      '</tr>';
+  }).join('');
+  const count = $('#receiptsCount');
+  if (count) {
+    const noun = (query ? state.payments.length : rows.length) === 1 ? 'receipt' : 'receipts';
+    count.textContent = rows.length + (query ? ' of ' + state.payments.length : '') + ' ' + noun;
+  }
+  const empty = $('#receiptsEmpty');
+  if (empty) empty.classList.toggle('hidden', rows.length > 0);
+  const wrap = body.closest('.table-wrap');
+  if (wrap) wrap.classList.toggle('hidden', rows.length === 0);
+}
+function renderExcelView() {
+  const body = $('#excelBody');
+  if (!body) return;
+  const query = (state.excelSearch || '').toLowerCase();
+  const rows = state.payments.filter(function (p) {
+    if (!query) return true;
+    const haystack = [p.id, p.name, p.phone, p.email, fmtDate(p._paidDate), money(p.amount), String(p.months),
+      String(Math.round((p._monthsCovered || 0) * 100) / 100), fmtDate(p._coverageEnd),
+      p.source === 'import' ? 'Imported' : 'Form', p.paymentMethod || 'momo', paymentMethodLabel(p), p.hasScreenshot ? 'Yes' : 'No']
+      .concat(p.courses).join(' ').toLowerCase();
+    return haystack.indexOf(query) >= 0;
+  });
+  body.innerHTML = rows.map(function (p) {
+    return '<tr>' +
+      '<td data-label="Date paid" class="nowrap">' + esc(fmtDate(p._paidDate)) + '</td>' +
+      '<td data-label="Reference"><span class="tiny" title="' + esc(p.id) + '">' + esc(String(p.id).slice(-8).toUpperCase()) + '</span></td>' +
+      '<td data-label="Student"><strong>' + esc(p.name) + '</strong></td>' +
+      '<td data-label="Phone" class="nowrap">' + esc(p.phone) + '</td>' +
+      '<td data-label="Email">' + esc(p.email || '-') + '</td>' +
+      '<td data-label="Courses"><div class="course-chips">' + courseChips(p.courses) + '</div></td>' +
+      '<td data-label="Amount" class="num">' + esc(money(p.amount)) + '</td>' +
+      '<td data-label="Months">' + esc(p.months) + '</td>' +
+      '<td data-label="Covered">' + esc(String(Math.round((p._monthsCovered || 0) * 100) / 100)) + '</td>' +
+      '<td data-label="Paid until" class="nowrap">' + esc(fmtDate(p._coverageEnd)) + '</td>' +
+      '<td data-label="Source">' + esc(p.source === 'import' ? 'Imported' : 'Form') + '</td>' +
+      '<td data-label="Method">' + esc(paymentMethodLabel(p)) + '</td>' +
+      '<td data-label="Screenshot">' + (p.hasScreenshot ? 'Yes' : 'No') + '</td>' +
+      '</tr>';
+  }).join('');
+  const count = $('#excelCount');
+  if (count) {
+    const noun = (query ? state.payments.length : rows.length) === 1 ? 'row' : 'rows';
+    count.textContent = rows.length + (query ? ' of ' + state.payments.length : '') + ' ' + noun;
+  }
+  const empty = $('#excelEmpty');
+  if (empty) empty.classList.toggle('hidden', rows.length > 0);
+  const wrap = body.closest('.table-wrap');
+  if (wrap) wrap.classList.toggle('hidden', rows.length === 0);
 }
 function renderStudents() {
   const body = $('#studentsBody');
@@ -3149,7 +3356,7 @@ function renderPayments() {
       '<td data-label="Screenshot">' + (p.hasScreenshot
         ? '<button type="button" class="btn btn-sm btn-outline" data-action="screenshot" data-id="' + esc(p.id) + '">View</button>'
         : '<span class="muted tiny">Not attached</span>') + '</td>' +
-      '<td data-label="Actions"><div class="table-actions"><button type="button" class="btn btn-sm btn-danger" data-action="delete" data-id="' + esc(p.id) + '">Delete</button></div></td>' +
+      '<td data-label="Actions"><div class="table-actions"><button type="button" class="btn btn-sm btn-outline" data-action="editdate" data-id="' + esc(p.id) + '">Edit date</button><button type="button" class="btn btn-sm btn-danger" data-action="delete" data-id="' + esc(p.id) + '">Delete</button></div></td>' +
       '</tr>';
   }).join('');
   const count = $('#paymentsCount');
@@ -3402,6 +3609,53 @@ function openScreenshotModal(payment) {
   }).catch(function (error) {
     console.error('Screenshot load failed', error);
     $('#modalBody').innerHTML = '<div class="modal-empty">Could not load the screenshot: ' + esc(error && error.message ? error.message : 'unknown error') + '</div>';
+  });
+}
+function openEditDateModal(id) {
+  const p = state.payments.find(function (x) { return x.id === id; });
+  if (!p) return;
+  const today = toISODate(new Date());
+  showModal('Change payment date',
+    '<p class="muted">Correct the date paid for ' + esc(p.name) + '. This recalculates the cover and student records.</p>' +
+    '<div class="field"><label for="editPaidDate">Date paid</label>' +
+    '<input type="date" id="editPaidDate" value="' + esc(p.paidDate) + '" max="' + today + '"></div>' +
+    '<p class="field-error" id="editDateError"></p>' +
+    '<div class="modal-actions"><button type="button" class="btn btn-outline" id="cancelDateBtn">Cancel</button>' +
+    '<button type="button" class="btn btn-primary" id="saveDateBtn">Save date</button></div>');
+  const cancel = $('#cancelDateBtn');
+  if (cancel) cancel.addEventListener('click', closeModal);
+  const save = $('#saveDateBtn');
+  if (!save) return;
+  save.addEventListener('click', function () {
+    const error = $('#editDateError');
+    if (error) { error.textContent = ''; error.classList.remove('show'); }
+    const value = $('#editPaidDate').value;
+    const parsed = parseDateOnly(value);
+    if (!parsed || toISODate(parsed) !== value) {
+      if (error) { error.textContent = 'Choose a valid date.'; error.classList.add('show'); }
+      return;
+    }
+    if (value > today) {
+      if (error) { error.textContent = 'The date cannot be in the future.'; error.classList.add('show'); }
+      return;
+    }
+    save.disabled = true;
+    save.textContent = 'Saving…';
+    db.collection('payments').doc(id).update({ paidDate: value }).then(function () {
+      closeModal();
+      toast('Payment date updated.', 'success');
+      return loadData();
+    }).catch(function (err) {
+      console.error('Date update failed', err);
+      save.disabled = false;
+      save.textContent = 'Save date';
+      if (error) {
+        error.textContent = err && err.code === 'permission-denied'
+          ? 'Only the tutor account can change a payment date.'
+          : 'Could not save the date. Try again.';
+        error.classList.add('show');
+      }
+    });
   });
 }
 function deletePayment(id) {
